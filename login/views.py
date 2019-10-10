@@ -1,8 +1,12 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import render,redirect,HttpResponse,Http404
 from . import  models
 from . import forms
 import hashlib,datetime
 from django.conf import settings
+from captcha.models import CaptchaStore
+from captcha.helpers import captcha_image_url
+import json
+
 
 
 # Create your views here.
@@ -18,16 +22,31 @@ def index(request):
         return redirect('/login/')
     return render(request,'login/index.html')
 
+
+def captcha_refresh(request):
+    """  Return json with new captcha for ajax refresh request """
+    if not request.is_ajax():
+ # 只接受ajax提交
+        raise Http404
+    new_key = CaptchaStore.generate_key()
+    to_json_response = {
+        'key': new_key,
+        'image_url': captcha_image_url(new_key),
+    }
+    return HttpResponse(json.dumps(to_json_response), content_type='application/json')
+
 def login(request):
 
     if request.session.get('is_login',None):#不允许重复登陆
         return redirect('/index/')
+
     if request.method == 'POST':
         login_form = forms.UserForm(request.POST)
         message = '请检查填写内容！'
         if login_form.is_valid():
             username = login_form.cleaned_data.get('username')
             password = login_form.cleaned_data.get('password')
+            captcha = login_form.cleaned_data.get('captcha')
             try:
                 user = models.User.objects.get(name=username)
             except:
@@ -65,12 +84,12 @@ def send_email(email, code):
 
     subject = '来自anne的注册确认邮件'
 
-    text_content = '''感谢注册www.liujiangblog.com，这里是刘江的博客和教程站点，专注于Python、Django和机器学习技术的分享！\
+    text_content = '''感谢注册www.jiangfan.com，这里是总会建成还没建成的姜凡个人的博客！\
                     如果你看到这条消息，说明你的邮箱服务器不提供HTML链接功能，请联系管理员！'''
 
     html_content = '''
-                    <p>感谢注册<a href="http://{}/confirm/?code={}" target=blank>www.liujiangblog.com</a>，\
-                    这里是刘江的博客和教程站点，专注于Python、Django和机器学习技术的分享！</p>
+                    <p>感谢注册<a href="http://{}/confirm/?code={}" target=blank>www.jiangfan.com</a>，\
+                    总会建成还没建成的姜凡个人的博客！</p>
                     <p>请点击站点链接完成注册确认！</p>
                     <p>此链接有效期为{}天！</p>
                     '''.format('127.0.0.1:8000', code, settings.CONFIRM_DAYS)

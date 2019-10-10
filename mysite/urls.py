@@ -25,6 +25,7 @@ urlpatterns = [
     path('logout/', views.logout),
     path('polls/',include('polls.urls')),
     path('confirm/',views.user_confirm),
-    path('captcha/',include('captcha.urls'))
+    path('captcha/',include('captcha.urls')),
+    path('refresh/$', views.captcha_refresh, name='captcha-refresh')
 
 ]
